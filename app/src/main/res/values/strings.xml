@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">TSport</string>
+    <string name="login_hint">X hesabınızla giriş yapın</string>
+    <string name="login_success">Giriş yapıldı</string>
+    <string name="session_expired">Oturum sona erdi, tekrar giriş yapın.</string>
+    <string name="hashtag_hint">Hashtag (örn. GsvBJK)</string>
+    <string name="search">Ara</string>
+    <string name="refresh">Yenile</string>
+    <string name="logout">Çıkış</string>
+    <string name="status_idle">Bir hashtag girip Ara\'ya basın.</string>
+    <string name="status_searching">Aranıyor...</string>
+    <string name="status_found">%1$d link bulundu</string>
+    <string name="status_empty">Sonuç yok. Hashtag\'i kontrol edip Yenile\'ye bas.</string>
+    <string name="status_no_internet">İnternet bağlantısı yok.</string>
+    <string name="status_page_error">X sayfası yüklenemedi.</string>
+    <string name="status_no_browser">Açılacak tarayıcı bulunamadı.</string>
+    <string name="logout_title">Çıkış</string>
+    <string name="logout_message">X oturumu bu cihazdan silinsin mi?</string>
+    <string name="cancel">Vazgeç</string>
+</resources>
