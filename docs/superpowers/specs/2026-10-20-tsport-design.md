@@ -32,7 +32,7 @@ Kapsam dışı: Tweet beğenme/retweet, mesajlaşma, geçmiş/favoriler, bildiri
 - Dil/teknoloji: Kotlin, klasik Android Views (XML), RecyclerView, Coroutines, OkHttp.
 - minSdk 24, compileSdk/targetSdk 35, paket `com.tsport.links`, uygulama adı `TSport`.
 - İki Activity: giriş noktası `MainActivity` (telefon `LAUNCHER` + TV `LEANBACK_LAUNCHER`); oturum yoksa `LoginActivity`'ye yönlendirir.
-- WebView ayarları: JavaScript, DOM storage, çerezler açık; `; wv` içermeyen Chrome Android user-agent; mixed content kapalı; yalnızca `x.com`/`twitter.com` gezinmesine izin.
+- WebView ayarları: JavaScript, DOM storage, çerezler açık; `; wv` içermeyen Chrome Android user-agent; mixed content kapalı. Gizli kazıma WebView'inde yalnızca `x.com`/`twitter.com`; login WebView'inde ayrıca Google/Apple OAuth alan adları.
 - Arama WebView'i `MainActivity` içinde 1dp boyutunda, saydam ve tıklanamaz şekilde pencereye bağlı tutulur (JS çalışması için görünür/attach durumda).
 
 ### Bileşenler
@@ -131,7 +131,7 @@ Hashtag'deki `#`, boşluk ve URL'e özel karakterler temizlenir/kodlanır. Boş 
 | X WebView engeli/bozuk sayfa | "X sayfası yüklenemedi." + Yenile |
 | t.co çözülemedi | t.co URL'i gösterilir |
 | Aynı anda yeni arama | Önceki iş iptal edilir |
-| WebView gezinmesi | Yalnızca x.com/twitter.com; dış linkler tarayıcıya |
+| WebView gezinmesi | Gizli WebView yalnızca x.com/twitter.com; login WebView ayrıca Google/Apple OAuth; dış linkler tarayıcıya |
 
 ## 8. Güvenlik ve Gizlilik
 

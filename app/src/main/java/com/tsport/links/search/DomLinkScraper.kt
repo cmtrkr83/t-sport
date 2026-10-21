@@ -55,7 +55,8 @@ class DomLinkScraper(
                 view: WebView?,
                 request: WebResourceRequest?
             ): Boolean {
-                val host = request?.url?.host?.lowercase() ?: return true
+                if (request?.isForMainFrame != true) return false
+                val host = request.url.host?.lowercase() ?: return true
                 return !isXHost(host)
             }
 

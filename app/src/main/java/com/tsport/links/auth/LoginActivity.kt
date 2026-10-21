@@ -43,8 +43,9 @@ class LoginActivity : AppCompatActivity() {
                 view: WebView?,
                 request: WebResourceRequest?
             ): Boolean {
-                val host = request?.url?.host?.lowercase() ?: return true
-                return !isXHost(host)
+                if (request?.isForMainFrame != true) return false
+                val host = request.url.host?.lowercase() ?: return true
+                return !isAllowedHost(host)
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -75,9 +76,15 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    private fun isXHost(host: String): Boolean =
+    private fun isAllowedHost(host: String): Boolean =
         host == "x.com" ||
             host.endsWith(".x.com") ||
             host == "twitter.com" ||
-            host.endsWith(".twitter.com")
+            host.endsWith(".twitter.com") ||
+            host == "google.com" ||
+            host.endsWith(".google.com") ||
+            host == "googleusercontent.com" ||
+            host.endsWith(".googleusercontent.com") ||
+            host == "apple.com" ||
+            host.endsWith(".apple.com")
 }
