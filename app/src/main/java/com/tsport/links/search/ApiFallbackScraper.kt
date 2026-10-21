@@ -1,6 +1,7 @@
 package com.tsport.links.search
 
 import android.webkit.WebView
+import com.tsport.links.links.LinkCandidate
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -20,7 +21,7 @@ class ApiFallbackScraper(
         csrfToken: String,
         maxPages: Int = 3,
         timeoutMs: Long = 20_000
-    ): List<String> {
+    ): List<LinkCandidate> {
         if (csrfToken.isBlank()) return emptyList()
         val raw = withContext(Dispatchers.Main) {
             val deferred = CompletableDeferred<String>()
@@ -47,7 +48,7 @@ class ApiFallbackScraper(
             }
         }
         if (raw == SESSION_EXPIRED) throw SessionExpiredException()
-        return withContext(Dispatchers.Default) { TweetJsonLinkParser.extractUrls(raw) }
+        return withContext(Dispatchers.Default) { TweetJsonLinkParser.extractCandidates(raw) }
     }
 
     companion object {

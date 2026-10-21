@@ -36,7 +36,7 @@ class LinkAdapter(
 
         fun bind(number: Int, item: LinkItem) {
             binding.textNumber.text = number.toString()
-            binding.textDomain.text = item.domain
+            binding.textDomain.text = item.author ?: item.domain
             binding.textUrl.text = item.url
             binding.root.setOnClickListener { onClick(item) }
         }

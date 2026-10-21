@@ -5,4 +5,6 @@
     <color name="muted">#9AA6B2</color>
     <color name="accent">#4FC3F7</color>
     <color name="focus">#4FC3F7</color>
+    <color name="danger">#D32F2F</color>
+    <color name="on_danger">#FFFFFF</color>
 </resources>

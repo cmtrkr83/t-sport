@@ -12,9 +12,20 @@ class LinkExtractor(
     private val maxLinks: Int = 20
 ) {
 
-    suspend fun extract(candidates: List<String>): List<LinkItem> {
-        val normalized = candidates.mapNotNull(::normalize).distinct()
-        val tcoUrls = normalized.filter(::isTco)
+    suspend fun extract(candidates: List<LinkCandidate>): List<LinkItem> {
+        val normalized = LinkedHashMap<String, LinkCandidate>()
+        for (candidate in candidates) {
+            val url = normalize(candidate.url) ?: continue
+            val author = candidate.author?.trim()?.takeIf { it.isNotEmpty() }
+            val existing = normalized[url]
+            if (existing == null) {
+                normalized[url] = LinkCandidate(url, author)
+            } else if (existing.author == null && author != null) {
+                normalized[url] = existing.copy(author = author)
+            }
+        }
+
+        val tcoUrls = normalized.keys.filter(::isTco)
         val resolvedTco = coroutineScope {
             val permits = Semaphore(MAX_CONCURRENT_RESOLVES)
             tcoUrls.map { url ->
@@ -23,14 +34,19 @@ class LinkExtractor(
         }
 
         val results = LinkedHashMap<String, LinkItem>()
-        for (candidate in normalized) {
+        for ((candidate, meta) in normalized) {
             if (results.size >= maxLinks) break
-            val resolved = resolvedTco[candidate]
-            val finalUrl = normalize(resolved ?: candidate) ?: candidate
-            if (isExcludedHost(finalUrl)) continue
-            if (results.containsKey(finalUrl)) continue
-            val domain = hostOf(finalUrl) ?: continue
-            results[finalUrl] = LinkItem(url = finalUrl, domain = domain)
+            val finalUrl = canonicalBroadcast(resolvedTco[candidate] ?: candidate) ?: continue
+            val existing = results[finalUrl]
+            if (existing == null) {
+                results[finalUrl] = LinkItem(
+                    url = finalUrl,
+                    domain = "x.com",
+                    author = meta.author
+                )
+            } else if (existing.author == null && meta.author != null) {
+                results[finalUrl] = existing.copy(author = meta.author)
+            }
         }
         return results.values.toList()
     }
@@ -50,17 +66,28 @@ class LinkExtractor(
         }
     }
 
-    private fun isTco(url: String): Boolean = hostOf(url) == "t.co"
+    private fun canonicalBroadcast(raw: String): String? {
+        val uri = try {
+            URI(raw)
+        } catch (_: Exception) {
+            return null
+        }
+        val host = uri.host?.lowercase()?.removePrefix("www.") ?: return null
+        if (!isXHost(host)) return null
+        val path = uri.path ?: return null
+        if (!path.startsWith(BROADCAST_PATH)) return null
+        val id = path.removePrefix(BROADCAST_PATH).trim('/')
+        if (!BROADCAST_ID.matches(id)) return null
+        return "https://x.com/i/broadcasts/$id"
+    }
 
-    private fun isExcludedHost(url: String): Boolean {
-        val host = hostOf(url) ?: return true
-        return host == "x.com" ||
+    private fun isXHost(host: String): Boolean =
+        host == "x.com" ||
             host.endsWith(".x.com") ||
             host == "twitter.com" ||
-            host.endsWith(".twitter.com") ||
-            host == "twimg.com" ||
-            host.endsWith(".twimg.com")
-    }
+            host.endsWith(".twitter.com")
+
+    private fun isTco(url: String): Boolean = hostOf(url) == "t.co"
 
     private fun hostOf(url: String): String? = try {
         URI(url).host?.lowercase()?.removePrefix("www.")
@@ -70,5 +97,7 @@ class LinkExtractor(
 
     companion object {
         private const val MAX_CONCURRENT_RESOLVES = 6
+        private const val BROADCAST_PATH = "/i/broadcasts/"
+        private val BROADCAST_ID = Regex("^[A-Za-z0-9_-]+$")
     }
 }

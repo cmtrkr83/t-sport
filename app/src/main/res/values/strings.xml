@@ -5,7 +5,6 @@
     <string name="session_expired">Oturum sona erdi, tekrar giriş yapın.</string>
     <string name="hashtag_hint">Hashtag (örn. GsvBJK)</string>
     <string name="search">Ara</string>
-    <string name="refresh">Yenile</string>
     <string name="logout">Çıkış</string>
     <string name="status_idle">Bir hashtag girip Ara\'ya basın.</string>
     <string name="status_searching">Aranıyor...</string>

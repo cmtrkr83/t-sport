@@ -71,7 +71,6 @@ class MainActivity : AppCompatActivity() {
 
         binding.hashtagInput.setText(prefs().getString(KEY_LAST_HASHTAG, ""))
         binding.searchButton.setOnClickListener { startSearch() }
-        binding.refreshButton.setOnClickListener { startSearch() }
         binding.logoutButton.setOnClickListener { confirmLogout() }
 
         lifecycleScope.launch {
@@ -131,7 +130,6 @@ class MainActivity : AppCompatActivity() {
         val searching = state is SearchState.Searching
         binding.progress.visibility = if (searching) View.VISIBLE else View.GONE
         binding.searchButton.isEnabled = !searching
-        binding.refreshButton.isEnabled = !searching
         binding.logoutButton.isEnabled = !searching
         binding.hashtagInput.isEnabled = !searching
 

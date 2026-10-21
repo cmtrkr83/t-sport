@@ -2,6 +2,7 @@ package com.tsport.links.links
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -11,59 +12,73 @@ class LinkExtractorTest {
         override suspend fun resolve(url: String): String? = map[url]
     }
 
+    private fun candidates(vararg urls: String): List<LinkCandidate> =
+        urls.map { LinkCandidate(it) }
+
     @Test
-    fun `filters internal media relative and non http links`() = runBlocking {
+    fun `keeps only x broadcast links`() = runBlocking {
         val extractor = LinkExtractor(FakeResolver())
         val result = extractor.extract(
-            listOf(
+            candidates(
                 "https://x.com/user/status/1",
                 "https://twitter.com/user/status/2",
                 "https://pbs.twimg.com/media/a.jpg",
                 "https://video.twimg.com/ext/tv/1.mp4",
                 "https://abs.twimg.com/a.js",
+                "https://example.com/stream",
                 "/relative/path",
                 "javascript:alert(1)",
                 "ftp://example.com/file",
-                "https://example.com/stream"
+                "https://x.com/i/broadcasts/1dKrPrjObjkJX"
             )
         )
-        assertEquals(listOf("https://example.com/stream"), result.map { it.url })
-        assertEquals("example.com", result.single().domain)
+        assertEquals(listOf("https://x.com/i/broadcasts/1dKrPrjObjkJX"), result.map { it.url })
+        assertEquals("x.com", result.single().domain)
     }
 
     @Test
-    fun `resolves tco and deduplicates final urls`() = runBlocking {
+    fun `resolves tco and deduplicates broadcasts`() = runBlocking {
         val resolver = FakeResolver(
             mapOf(
-                "https://t.co/a" to "https://example.com/live",
-                "https://t.co/b" to "https://example.com/live"
+                "https://t.co/a" to "https://x.com/i/broadcasts/abc?utm=1",
+                "https://t.co/b" to "https://twitter.com/i/broadcasts/abc"
             )
         )
         val result = LinkExtractor(resolver).extract(
-            listOf("https://t.co/a", "https://t.co/b", "https://example.com/live")
+            candidates("https://t.co/a", "https://t.co/b", "https://x.com/i/broadcasts/abc")
         )
-        assertEquals(listOf("https://example.com/live"), result.map { it.url })
+        assertEquals(listOf("https://x.com/i/broadcasts/abc"), result.map { it.url })
     }
 
     @Test
-    fun `keeps tco when resolution fails`() = runBlocking {
-        val result = LinkExtractor(FakeResolver()).extract(listOf("https://t.co/xyz"))
-        assertEquals("https://t.co/xyz", result.single().url)
-        assertEquals("t.co", result.single().domain)
+    fun `dropping unresolved tco links`() = runBlocking {
+        val result = LinkExtractor(FakeResolver()).extract(candidates("https://t.co/xyz"))
+        assertTrue(result.isEmpty())
     }
 
     @Test
-    fun `strips trailing punctuation and fragments`() = runBlocking {
+    fun `canonicalizes query fragments trailing punctuation and twitter host`() = runBlocking {
         val result = LinkExtractor(FakeResolver()).extract(
-            listOf("https://example.com/live).", "https://example.com/page#section")
+            candidates(
+                "https://x.com/i/broadcasts/abc).",
+                "https://mobile.twitter.com/i/broadcasts/def?s=20#section",
+                "https://x.com/i/broadcasts/abc/"
+            )
         )
-        assertEquals(listOf("https://example.com/live", "https://example.com/page"), result.map { it.url })
+        assertEquals(
+            listOf("https://x.com/i/broadcasts/abc", "https://x.com/i/broadcasts/def"),
+            result.map { it.url }
+        )
     }
 
     @Test
     fun `caps results at max links`() = runBlocking {
         val result = LinkExtractor(FakeResolver(), maxLinks = 2).extract(
-            listOf("https://a.com/1", "https://b.com/2", "https://c.com/3")
+            candidates(
+                "https://x.com/i/broadcasts/a",
+                "https://x.com/i/broadcasts/b",
+                "https://x.com/i/broadcasts/c"
+            )
         )
         assertEquals(2, result.size)
     }
@@ -73,19 +88,56 @@ class LinkExtractorTest {
         val calls = mutableListOf<String>()
         val resolver = UrlResolver { url ->
             calls.add(url)
-            "https://example.com/live"
+            "https://x.com/i/broadcasts/abc"
         }
         val result = LinkExtractor(resolver).extract(
-            listOf("https://t.co/a", "https://t.co/a", "https://t.co/b")
+            candidates("https://t.co/a", "https://t.co/a", "https://t.co/b")
         )
-        assertEquals(listOf("https://example.com/live"), result.map { it.url })
+        assertEquals(listOf("https://x.com/i/broadcasts/abc"), result.map { it.url })
         assertEquals(setOf("https://t.co/a", "https://t.co/b"), calls.toSet())
     }
 
     @Test
-    fun `ignores blank and malformed entries`() = runBlocking {
-        val result = LinkExtractor(FakeResolver()).extract(listOf("", "   ", "not a url", "https://ok.com/x"))
-        assertEquals(listOf("https://ok.com/x"), result.map { it.url })
-        assertTrue(result.single().domain == "ok.com")
+    fun `keeps author through tco resolution`() = runBlocking {
+        val resolver = FakeResolver(mapOf("https://t.co/a" to "https://x.com/i/broadcasts/abc"))
+        val result = LinkExtractor(resolver).extract(
+            listOf(LinkCandidate("https://t.co/a", "Ali Veli"))
+        )
+        assertEquals("Ali Veli", result.single().author)
+    }
+
+    @Test
+    fun `uses first non blank author for duplicate broadcasts`() = runBlocking {
+        val result = LinkExtractor(FakeResolver()).extract(
+            listOf(
+                LinkCandidate("https://x.com/i/broadcasts/abc"),
+                LinkCandidate("https://twitter.com/i/broadcasts/abc", "Ayşe Yılmaz")
+            )
+        )
+        assertEquals("Ayşe Yılmaz", result.single().author)
+    }
+
+    @Test
+    fun `leaves author null when no tweet author is available`() = runBlocking {
+        val result = LinkExtractor(FakeResolver()).extract(
+            candidates("https://x.com/i/broadcasts/abc")
+        )
+        assertNull(result.single().author)
+    }
+
+    @Test
+    fun `ignores blank malformed and non broadcast x paths`() = runBlocking {
+        val result = LinkExtractor(FakeResolver()).extract(
+            candidates(
+                "",
+                "   ",
+                "not a url",
+                "https://x.com/i/broadcasts/",
+                "https://x.com/i/broadcasts/not/valid",
+                "https://x.com/i/flow/login",
+                "https://x.com/i/broadcasts/ok_123"
+            )
+        )
+        assertEquals(listOf("https://x.com/i/broadcasts/ok_123"), result.map { it.url })
     }
 }

@@ -63,7 +63,7 @@ com.tsport.links
 
 1. Açılış: `auth_token` çerezi yoksa `LoginActivity`; varsa `MainActivity`.
 2. Login: tam ekran WebView `https://x.com/login`; giriş sonrası çerez kontrol edilir ve ana ekrana geçilir. Üstte "X hesabınızla giriş yapın" bilgisi ve yükleniyor çubuğu.
-3. Ana ekran: hashtag alanı (son kullanılanla dolu), `Ara`, `Yenile`, `Çıkış`; durum satırı; numaralı link listesi.
+3. Ana ekran: hashtag alanı (son kullanılanla dolu), `Ara`, `Çıkış`; durum satırı; numaralı link listesi.
 4. Ara: buton devre dışı, "Aranıyor..." gösterilir; sonuçta "N link bulundu" veya hata/boş mesajı.
 5. Bir linke tıklama/OK: `Intent.ACTION_VIEW` ile varsayılan tarayıcı.
 6. Yenile: aynı hashtag ile aramayı baştan çalıştırır.
@@ -83,12 +83,12 @@ Hashtag'deki `#`, boşluk ve URL'e özel karakterler temizlenir/kodlanır. Boş 
 1. WebView arama URL'ini yükler; `onPageFinished` sonrası 2 sn beklenir.
 2. JS enjekte edilir:
    - `article[data-testid="tweet"]` kartları seçilir.
-   - Her kartta `div[data-testid="tweetText"] a[href]` ve `div[data-testid="card.wrapper"] a[href]` adayları toplanır.
-   - Göreli adresler ve `x.com`, `twitter.com`, `pbs.twimg.com`, `video.twimg.com`, `abs.twimg.com` adresleri elenir.
+   - Her kartta `div[data-testid="tweetText"] a[href]` ve `div[data-testid="card.wrapper"] a[href]` adayları toplanır; tweet sahibinin adı `div[data-testid="User-Name"]` içinden alınır.
+   - Yalnızca `x.com`/`twitter.com` üzerindeki `/i/broadcasts/<kod>` adresleri ve `t.co` bağlantıları toplanır; diğer X ve twimg adresleri elenir.
    - Sonuç JSON olarak `@JavascriptInterface` ile uygulamaya döner.
 3. Yetersiz link varsa JS ile sayfa sonuna kaydırılır; 1,5 sn beklenir; yeni tweet sayısına bakılır.
 4. Döngü: 20 tekil link, 10 kaydırma veya 25 sn toplam süre sınırı.
-5. Adaylar `LinkExtractor`'a verilir; t.co çözülür; nihai URL ile tekilleştirilir; ilk 20 tutulur.
+5. Adaylar `LinkExtractor`'a verilir; t.co çözülür; yalnızca `https://x.com/i/broadcasts/<kod>` biçimindeki nihai URL'ler kanonikleştirilip tekilleştirilir; ilk 20 tutulur.
 
 ### 5.3 API yedeği (ikincil)
 
@@ -96,14 +96,14 @@ Hashtag'deki `#`, boşluk ve URL'e özel karakterler temizlenir/kodlanır. Boş 
 - DOM 20 linki çıkaramazsa yakalanan istek, sayfa bağlamında `fetch` ile tekrar oynatılır:
   - `variables` JSON'u çözülür; `count=40`, mevcut `cursor` ayarlanır.
   - `x-csrf-token` çerezden (`ct0`) okunur; `authorization` için X'in herkese açık web bearer sabiti kullanılır.
-  - Yanıttaki `tweet_results` içinden `legacy.entities.urls[].expanded_url`, `note_tweet...entity_set.urls` ve link kartı URL'leri alınır.
+  - Yanıttaki `tweet_results` içinden `legacy.entities.urls[].expanded_url`, `note_tweet...entity_set.urls` ve link kartı URL'leri, tweet sahibinin adıyla birlikte alınır (`core.user_results.result.legacy.name`, yoksa `@screen_name`).
   - Cursor ile en fazla 3 sayfa istenir; 20 linkte durulur.
 - Query ID/features koda gömülmez, çalışma anında yakalanır. Bearer sabiti X tarafından değiştirilirse bu yol çalışmaz; DOM yolu birincil kalır.
 
 ### 5.4 t.co çözümleme
 
 - `https://t.co/...` adayları OkHttp `HEAD` (gerekirse `GET`) ile en fazla 5 yönlendirme takip edilerek çözülür.
-- Zaman aşımı 8 sn; başarısızsa aday t.co URL'i korunur.
+- Zaman aşımı 8 sn; başarısızsa aday elenir. X alan adına ulaşılınca yönlendirme durdurulur; böylece login yönlendirmesi yayın linkini kaybettirmez.
 - Aynı nihai URL birden fazla kez görünürse yalnızca ilki listelenir (fragment atılır).
 
 ## 6. Arayüz
@@ -114,7 +114,7 @@ Hashtag'deki `#`, boşluk ve URL'e özel karakterler temizlenir/kodlanır. Boş 
   - Başlık: "TSport Link Bulucu".
   - Hashtag `EditText` (hint: "Hashtag (örn. GsvBJK)") + `Ara`.
   - Durum satırı.
-  - `RecyclerView`: numara, alan adı (büyük), tam URL (küçük, tek satır, sonu üç nokta).
+  - `RecyclerView`: numara, tweet sahibi adı (yoksa `x.com`) büyük başlık, tam URL (küçük, tek satır, sonu üç nokta).
   - Boş durum: "Sonuç yok. Hashtag'i kontrol edip Yenile'ye bas."
   - Hata durumu: Türkçe mesaj + `Yenile`.
 - TV: `LEANBACK_LAUNCHER`, `android.software.leanback` gerekli değil, dokunmatik gerekli değil; 320×180 banner. Tüm kontroller `focusable`; odaklanınca belirgin çerçeve/renk; D-pad yukarı/aşağı liste, OK açar. Metin girişi sistem klavyesiyle.

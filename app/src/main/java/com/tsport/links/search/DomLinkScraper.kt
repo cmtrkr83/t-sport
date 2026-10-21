@@ -5,6 +5,7 @@ import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.tsport.links.links.LinkCandidate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -13,6 +14,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.util.UUID
 import org.json.JSONArray
+import org.json.JSONObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -26,7 +28,7 @@ class DomLinkScraper(
         searchUrl: String,
         maxCandidates: Int = 60,
         timeoutMs: Long = 25_000
-    ): List<String> = withTimeout(timeoutMs) {
+    ): List<LinkCandidate> = withTimeout(timeoutMs) {
         withContext(Dispatchers.Main) {
             loadAndWait(searchUrl)
             delay(2_000)
@@ -101,10 +103,19 @@ class DomLinkScraper(
             host == "twitter.com" ||
             host.endsWith(".twitter.com")
 
-    private fun parseCandidates(json: String): List<String> = try {
+    private fun parseCandidates(json: String): List<LinkCandidate> = try {
         val array = JSONArray(json)
         (0 until array.length()).mapNotNull { index ->
-            array.optString(index).takeIf { it.isNotBlank() }
+            when (val value = array.opt(index)) {
+                is JSONObject -> {
+                    val url = value.optString("url").takeIf { it.isNotBlank() }
+                        ?: return@mapNotNull null
+                    val author = value.optString("author").takeIf { it.isNotBlank() }
+                    LinkCandidate(url, author)
+                }
+                is String -> value.takeIf { it.isNotBlank() }?.let { LinkCandidate(it) }
+                else -> null
+            }
         }
     } catch (_: Exception) {
         emptyList()

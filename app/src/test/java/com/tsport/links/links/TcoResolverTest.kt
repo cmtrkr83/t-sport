@@ -65,6 +65,18 @@ class TcoResolverTest {
     }
 
     @Test
+    fun `stops at x url before a possible login redirect`() = runBlocking {
+        server.enqueue(
+            MockResponse().setResponseCode(302)
+                .setHeader("Location", "https://x.com/i/broadcasts/abc")
+        )
+        assertEquals(
+            "https://x.com/i/broadcasts/abc",
+            resolver.resolve(server.url("/tco").toString())
+        )
+    }
+
+    @Test
     fun `falls back to get when head is not allowed`() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(405))
         server.enqueue(MockResponse().setResponseCode(302).setHeader("Location", "/final"))

@@ -2,6 +2,7 @@ package com.tsport.links.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tsport.links.links.LinkCandidate
 import com.tsport.links.links.LinkExtractor
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
@@ -24,7 +25,7 @@ class SearchViewModel(
 
     fun search(
         rawHashtag: String,
-        candidateSource: suspend (searchUrl: String) -> List<String>
+        candidateSource: suspend (searchUrl: String) -> List<LinkCandidate>
     ) {
         val searchUrl = SearchQueryBuilder.buildSearchUrl(rawHashtag)
         if (searchUrl == null) {

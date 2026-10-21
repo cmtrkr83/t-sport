@@ -19,6 +19,7 @@ class TcoResolver(
         var current = url
         var redirects = 0
         while (true) {
+            if (current != url && isXHost(current)) return current
             var hop = fetch(current, useGet = false) ?: return null
             if (hop.code == 405 || hop.code == 403) {
                 hop = fetch(current, useGet = true) ?: return null
@@ -62,6 +63,14 @@ class TcoResolver(
                 }
             })
         }
+
+    private fun isXHost(url: String): Boolean {
+        val host = url.toHttpUrlOrNull()?.host?.lowercase() ?: return false
+        return host == "x.com" ||
+            host.endsWith(".x.com") ||
+            host == "twitter.com" ||
+            host.endsWith(".twitter.com")
+    }
 
     private data class Hop(val code: Int, val location: String?)
 

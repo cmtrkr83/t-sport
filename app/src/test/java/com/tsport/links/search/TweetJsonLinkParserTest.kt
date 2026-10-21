@@ -1,14 +1,15 @@
 package com.tsport.links.search
 
+import com.tsport.links.links.LinkCandidate
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TweetJsonLinkParserTest {
 
     @Test
-    fun `extracts urls from tweet entities note tweets and cards`() {
+    fun `extracts tweet urls with author and skips profile data`() {
         val json = """
             {
               "data": {
@@ -21,10 +22,31 @@ class TweetJsonLinkParserTest {
                             "itemContent": {
                               "tweet_results": {
                                 "result": {
+                                  "core": {
+                                    "user_results": {
+                                      "result": {
+                                        "avatar": {
+                                          "image_url": "https://pbs.twimg.com/profile/1.jpg"
+                                        },
+                                        "legacy": {
+                                          "name": "Spor Muhabiri",
+                                          "screen_name": "spor",
+                                          "entities": {
+                                            "url": {
+                                              "urls": [{
+                                                "expanded_url": "https://profile.example/bio"
+                                              }]
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
                                   "legacy": {
+                                    "full_text": "Canlı yayın",
                                     "entities": {
                                       "urls": [{
-                                        "expanded_url": "https://example.com/live",
+                                        "expanded_url": "https://x.com/i/broadcasts/abc",
                                         "url": "https://t.co/abc"
                                       }]
                                     },
@@ -45,26 +67,8 @@ class TweetJsonLinkParserTest {
                                       "result": {
                                         "entity_set": {
                                           "urls": [{
-                                            "expanded_url": "https://example.org/stream"
+                                            "expanded_url": "https://x.com/i/broadcasts/note"
                                           }]
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "core": {
-                                    "user_results": {
-                                      "result": {
-                                        "avatar": {
-                                          "image_url": "https://pbs.twimg.com/profile/1.jpg"
-                                        },
-                                        "legacy": {
-                                          "entities": {
-                                            "url": {
-                                              "urls": [{
-                                                "expanded_url": "https://profile.example/bio"
-                                              }]
-                                            }
-                                          }
                                         }
                                       }
                                     }
@@ -82,25 +86,81 @@ class TweetJsonLinkParserTest {
             }
         """.trimIndent()
 
-        val urls = TweetJsonLinkParser.extractUrls(json)
-        assertTrue(urls.contains("https://example.com/live"))
-        assertTrue(urls.contains("https://t.co/abc"))
-        assertTrue(urls.contains("https://example.org/stream"))
-        assertTrue(urls.contains("https://example.net/card"))
-        assertFalse(urls.contains("https://pbs.twimg.com/profile/1.jpg"))
-        assertFalse(urls.contains("https://profile.example/bio"))
+        val candidates = TweetJsonLinkParser.extractCandidates(json)
+        val byUrl = candidates.associate { it.url to it.author }
+
+        assertEquals("Spor Muhabiri", byUrl["https://x.com/i/broadcasts/abc"])
+        assertEquals("Spor Muhabiri", byUrl["https://t.co/abc"])
+        assertEquals("Spor Muhabiri", byUrl["https://x.com/i/broadcasts/note"])
+        assertEquals("Spor Muhabiri", byUrl["https://example.net/card"])
+        assertNull(byUrl["https://pbs.twimg.com/profile/1.jpg"])
+        assertNull(byUrl["https://profile.example/bio"])
     }
 
     @Test
-    fun `deduplicates urls`() {
-        val json = """{"a":{"expanded_url":"https://example.com/x"},"b":{"expanded_url":"https://example.com/x"}}"""
-        assertEquals(listOf("https://example.com/x"), TweetJsonLinkParser.extractUrls(json))
+    fun `deduplicates urls and keeps first non blank author`() {
+        val json = """
+            {
+              "first": {
+                "legacy": {
+                  "full_text": "a",
+                  "entities": {
+                    "urls": [{"expanded_url": "https://x.com/i/broadcasts/abc"}]
+                  }
+                }
+              },
+              "second": {
+                "core": {
+                  "user_results": {
+                    "result": {
+                      "legacy": {"name": "Ayşe Yılmaz"}
+                    }
+                  }
+                },
+                "legacy": {
+                  "full_text": "b",
+                  "entities": {
+                    "urls": [{"expanded_url": "https://x.com/i/broadcasts/abc"}]
+                  }
+                }
+              }
+            }
+        """.trimIndent()
+
+        val candidates = TweetJsonLinkParser.extractCandidates(json)
+        assertEquals(1, candidates.size)
+        assertEquals("Ayşe Yılmaz", candidates.single().author)
+    }
+
+    @Test
+    fun `falls back to screen name when display name is missing`() {
+        val json = """
+            {
+              "result": {
+                "core": {
+                  "user_results": {
+                    "result": {
+                      "legacy": {"screen_name": "spor"}
+                    }
+                  }
+                },
+                "legacy": {
+                  "full_text": "a",
+                  "entities": {
+                    "urls": [{"expanded_url": "https://x.com/i/broadcasts/abc"}]
+                  }
+                }
+              }
+            }
+        """.trimIndent()
+
+        assertEquals("@spor", TweetJsonLinkParser.extractCandidates(json).single().author)
     }
 
     @Test
     fun `returns empty list for null blank or malformed json`() {
-        assertEquals(emptyList<String>(), TweetJsonLinkParser.extractUrls(null))
-        assertEquals(emptyList<String>(), TweetJsonLinkParser.extractUrls(""))
-        assertEquals(emptyList<String>(), TweetJsonLinkParser.extractUrls("{bad"))
+        assertTrue(TweetJsonLinkParser.extractCandidates(null).isEmpty())
+        assertTrue(TweetJsonLinkParser.extractCandidates("").isEmpty())
+        assertTrue(TweetJsonLinkParser.extractCandidates("{bad").isEmpty())
     }
 }

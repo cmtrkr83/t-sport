@@ -1,5 +1,6 @@
 package com.tsport.links.search
 
+import com.tsport.links.links.LinkCandidate
 import com.tsport.links.links.LinkExtractor
 import com.tsport.links.links.UrlResolver
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,7 @@ class SearchViewModelTest {
     fun `success state contains extracted links`() = runTest {
         val viewModel = SearchViewModel(LinkExtractor(resolver))
         viewModel.search("GsvBJK") {
-            listOf("https://example.com/a", "https://example.com/b")
+            listOf(LinkCandidate("https://x.com/i/broadcasts/a"), LinkCandidate("https://x.com/i/broadcasts/b"))
         }
         advanceUntilIdle()
         val state = viewModel.state.value
@@ -110,7 +111,7 @@ class SearchViewModelTest {
             null
         }
         val viewModel = SearchViewModel(LinkExtractor(slowResolver))
-        viewModel.search("GsvBJK") { listOf("https://t.co/slow") }
+        viewModel.search("GsvBJK") { listOf(LinkCandidate("https://t.co/slow")) }
         advanceTimeBy(26_000)
         runCurrent()
         val state = viewModel.state.value
