@@ -6,9 +6,9 @@ internal enum class TabSelection { SELECTED, CLICKED, FAILED }
 
 internal class LatestTabSelector(
     private val evaluate: suspend (String) -> String?,
-    private val findAttempts: Int = 6,
+    private val findAttempts: Int = 10,
     private val findIntervalMs: Long = 300L,
-    private val confirmAttempts: Int = 8,
+    private val confirmAttempts: Int = 20,
     private val confirmIntervalMs: Long = 250L
 ) {
 

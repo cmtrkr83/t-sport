@@ -42,6 +42,7 @@ import com.tsport.links.search.ApiFallbackScraper
 import com.tsport.links.search.DomLinkScraper
 import com.tsport.links.search.ScrapeBridge
 import com.tsport.links.search.SearchOptions
+import com.tsport.links.search.SearchQueryBuilder
 import com.tsport.links.search.SearchState
 import com.tsport.links.search.SearchTab
 import com.tsport.links.search.SearchViewModel
@@ -89,7 +90,12 @@ class MainActivity : AppCompatActivity() {
 
         bridge = ScrapeBridge()
         domScraper = DomLinkScraper(binding.scrapeWebView, bridge, readAsset("scrape_dom.js"))
-        fallbackScraper = ApiFallbackScraper(binding.scrapeWebView, bridge, readAsset("fallback_api.js"))
+        fallbackScraper = ApiFallbackScraper(
+            binding.scrapeWebView,
+            bridge,
+            readAsset("fallback_api.js"),
+            transactionScript = readAsset("transaction_bundle.js")
+        )
         configureWebView(binding.scrapeWebView, bridge)
 
         binding.hashtagInput.setText(prefs().getString(KEY_LAST_HASHTAG, ""))
@@ -189,12 +195,63 @@ class MainActivity : AppCompatActivity() {
             .apply()
         getSystemService<InputMethodManager>()?.hideSoftInputFromWindow(binding.hashtagInput.windowToken, 0)
         viewModel.search(options) { searchUrl ->
-            val domCandidates = domScraper.scrape(searchUrl, options.tab)
-            lastTabFallback = options.tab == SearchTab.LATEST && !domScraper.lastTabSelected
+            var tabFallback = false
+            val domCandidates = domScraper.scrape(
+                searchUrl,
+                options.tab,
+                timeoutMs = DOM_TIMEOUT_MS
+            )
+            if (options.tab == SearchTab.LATEST && !domScraper.lastTabSelected) {
+                tabFallback = true
+            }
+
+            // "En son" can be empty for a query whose broadcasts only show in
+            // "Popüler" (and vice versa). Try the other tab before giving up.
+            var effectiveTab = options.tab
+            val fallbackCandidates = if (domCandidates.isEmpty()) {
+                val fallbackTab = if (options.tab == SearchTab.LATEST) {
+                    SearchTab.POPULAR
+                } else {
+                    SearchTab.LATEST
+                }
+                val fallbackUrl = SearchQueryBuilder.buildSearchUrl(
+                    options.copy(tab = fallbackTab)
+                )
+                effectiveTab = fallbackTab
+                if (fallbackUrl == null) {
+                    emptyList()
+                } else {
+                    val result = domScraper.scrape(
+                        fallbackUrl,
+                        fallbackTab,
+                        timeoutMs = FALLBACK_DOM_TIMEOUT_MS
+                    )
+                    if (fallbackTab == SearchTab.LATEST && !domScraper.lastTabSelected) {
+                        tabFallback = true
+                    }
+                    result
+                }
+            } else {
+                emptyList()
+            }
+            lastTabFallback = tabFallback
+
             if (!authRepository.isLoggedIn()) {
                 throw SessionExpiredException()
             }
-            domCandidates + fallbackScraper.scrape(authRepository.csrfToken().orEmpty())
+            val apiCandidates = if (
+                domCandidates.isEmpty() && fallbackCandidates.isEmpty()
+            ) {
+                fallbackScraper.scrape(
+                    csrfToken = authRepository.csrfToken().orEmpty(),
+                    query = Uri.parse(searchUrl).getQueryParameter("q").orEmpty(),
+                    tab = effectiveTab,
+                    timeoutMs = API_TIMEOUT_MS
+                )
+            } else {
+                emptyList()
+            }
+            domCandidates + fallbackCandidates + apiCandidates
         }
     }
 
@@ -210,7 +267,10 @@ class MainActivity : AppCompatActivity() {
         binding.tabPopular.isEnabled = !searching
         binding.tabLatest.isEnabled = !searching
 
-        val tabWarning = if (shouldShowTabFallback(lastOptions, lastTabFallback)) {
+        val tabWarning = if (
+            state is SearchState.Success &&
+            shouldShowTabFallback(lastOptions, lastTabFallback)
+        ) {
             getString(R.string.status_tab_fallback)
         } else {
             null
@@ -521,5 +581,8 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_STATE_TAB_LATEST = "state_tab_latest"
         private const val KEY_STATE_TAB_FALLBACK = "state_tab_fallback"
         private const val MAX_MATCH_FOCUS_ATTEMPTS = 6
+        private const val DOM_TIMEOUT_MS = 50_000L
+        private const val FALLBACK_DOM_TIMEOUT_MS = 40_000L
+        private const val API_TIMEOUT_MS = 15_000L
     }
 }

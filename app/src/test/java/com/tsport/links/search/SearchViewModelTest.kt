@@ -98,7 +98,7 @@ class SearchViewModelTest {
             delay(120_000)
             emptyList()
         }
-        advanceTimeBy(59_000)
+        advanceTimeBy(119_000)
         runCurrent()
         assertTrue(viewModel.state.value is SearchState.Searching)
         advanceTimeBy(2_000)

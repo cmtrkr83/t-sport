@@ -15,6 +15,14 @@ class ScrapeBridge {
     @Volatile
     var expectedToken: String? = null
 
+    /** Last real SearchTimeline request seen in the X WebView. */
+    @Volatile
+    var lastSearchTimelineUrl: String? = null
+
+    /** X-Client-Transaction-Id captured from that request. */
+    @Volatile
+    var lastTransactionId: String? = null
+
     private val mainHandler = Handler(Looper.getMainLooper())
 
     @JavascriptInterface

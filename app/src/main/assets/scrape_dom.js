@@ -53,27 +53,56 @@
   function collect() {
     document.querySelectorAll('article[data-testid="tweet"]').forEach((article) => {
       const author = authorOf(article);
-      article.querySelectorAll(
-        'div[data-testid="tweetText"] a[href], div[data-testid="card.wrapper"] a[href]'
-      ).forEach((a) => add(a.href, author));
+      // Broadcast links can be in the tweet text, a card, or a quoted tweet.
+      article.querySelectorAll('a[href]').forEach((a) => add(a.href, author));
     });
   }
 
+  function articleCount() {
+    return document.querySelectorAll('article[data-testid="tweet"]').length;
+  }
+
+  function looksEmpty() {
+    if (articleCount() > 0) return false;
+    const text = (document.body.innerText || "").toLocaleLowerCase("tr");
+    return /sonuç bulunamadı|sonuç yok|hiçbir sonuç|no results/.test(text);
+  }
+
+  function broadcastCount() {
+    let count = 0;
+    for (const url of found.keys()) {
+      if (isBroadcast(url)) count++;
+    }
+    return count;
+  }
+
+  // X renders search results asynchronously. Wait for the first article, but
+  // stop as soon as enough usable links are on screen instead of always
+  // spending the full budget.
+  const firstResultDeadline = Math.min(started + 15000, started + BUDGET);
+  while (articleCount() === 0 && !looksEmpty() && Date.now() < firstResultDeadline) {
+    await sleep(500);
+  }
+
+  console.log("TSport scrape start articles=" + articleCount() + " url=" + location.href);
   collect();
-  let unchanged = 0;
-  for (let i = 0; i < 15 && found.size < MAX && Date.now() - started < BUDGET; i++) {
-    const count = document.querySelectorAll('article[data-testid="tweet"]').length;
+  let stableWithLinks = 0;
+  let lastFoundSize = found.size;
+  for (let i = 0; i < 8 && found.size < MAX && Date.now() - started < BUDGET; i++) {
+    if (looksEmpty()) break;
     window.scrollTo(0, document.body.scrollHeight);
     await sleep(1500);
     collect();
-    const nextCount = document.querySelectorAll('article[data-testid="tweet"]').length;
-    if (nextCount === count) {
-      unchanged++;
-      if (unchanged >= 2) break;
+    if (found.size >= 12 || broadcastCount() >= 3) break;
+    if (found.size > 0 && found.size === lastFoundSize) {
+      stableWithLinks++;
+      if (stableWithLinks >= 2) break;
     } else {
-      unchanged = 0;
+      stableWithLinks = 0;
     }
+    lastFoundSize = found.size;
   }
 
+  console.log("TSport scrape done found=" + found.size + " articles=" + articleCount() + " url=" + location.href);
   TSportBridge.domResult(TOKEN, JSON.stringify(Array.from(found, ([url, author]) => ({ url, author })).slice(0, MAX)));
 })();

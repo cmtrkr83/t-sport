@@ -77,6 +77,6 @@ class SearchViewModel(
     }
 
     companion object {
-        private const val SEARCH_TIMEOUT_MS = 60_000L
+        private const val SEARCH_TIMEOUT_MS = 120_000L
     }
 }

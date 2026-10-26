@@ -3,6 +3,7 @@ package com.tsport.links.search
 import android.graphics.Bitmap
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.tsport.links.links.LinkCandidate
@@ -32,19 +33,31 @@ class DomLinkScraper(
         searchUrl: String,
         tab: SearchTab = SearchTab.LATEST,
         maxCandidates: Int = 150,
-        timeoutMs: Long = 30_000
+        timeoutMs: Long = 50_000
     ): List<LinkCandidate> = withTimeoutOrNull(timeoutMs) {
         withContext(Dispatchers.Main) {
             lastTabSelected = true
-            loadAndWait(searchUrl)
+            val targetUrl = if (tab == SearchTab.LATEST && !searchUrl.contains("f=live")) {
+                "$searchUrl&f=live"
+            } else {
+                searchUrl
+            }
+            loadAndWait(targetUrl)
             delay(PAGE_SETTLE_MS)
-            val tabSelection = if (tab == SearchTab.LATEST) {
+            // Loading the f=live URL directly is more reliable than clicking the
+            // tab on a slow TV WebView. Keep the click as a fallback if X strips it.
+            val tabSelection = if (
+                tab == SearchTab.LATEST &&
+                webView.url?.contains("f=live") != true
+            ) {
                 LatestTabSelector(::evaluate).select()
             } else {
                 TabSelection.SELECTED
             }
-            lastTabSelected = tabSelection != TabSelection.FAILED
-            if (tabSelection == TabSelection.CLICKED) delay(RESULT_SETTLE_MS)
+            val urlShowsLatest = tab == SearchTab.LATEST &&
+                webView.url?.contains("f=live") == true
+            lastTabSelected = tabSelection != TabSelection.FAILED || urlShowsLatest
+            if (tabSelection != TabSelection.SELECTED) delay(RESULT_SETTLE_MS)
             val deferred = CompletableDeferred<String>()
             val token = UUID.randomUUID().toString()
             bridge.expectedToken = token
@@ -82,6 +95,14 @@ class DomLinkScraper(
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) = Unit
 
+            override fun shouldInterceptRequest(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): WebResourceResponse? {
+                captureSearchTimeline(request)
+                return super.shouldInterceptRequest(view, request)
+            }
+
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (!continuation.isActive) return
                 if (isLoginUrl(url)) {
@@ -118,6 +139,22 @@ class DomLinkScraper(
         webView.loadUrl(url)
     }
 
+    private fun captureSearchTimeline(request: WebResourceRequest?) {
+        val req = request ?: return
+        val host = req.url.host?.lowercase() ?: return
+        if (!isXHost(host)) return
+        val path = req.url.path ?: return
+        if (!path.contains("/i/api/graphql/") || !path.contains("/SearchTimeline")) return
+
+        bridge.lastSearchTimelineUrl = req.url.toString()
+        val transactionId = req.requestHeaders?.entries
+            ?.firstOrNull { it.key.equals("x-client-transaction-id", ignoreCase = true) }
+            ?.value
+        if (!transactionId.isNullOrBlank()) {
+            bridge.lastTransactionId = transactionId
+        }
+    }
+
     private fun isXHost(host: String): Boolean =
         host == "x.com" ||
             host.endsWith(".x.com") ||
@@ -144,8 +181,8 @@ class DomLinkScraper(
 
     private companion object {
         private const val PAGE_SETTLE_MS = 2_000L
-        private const val EVAL_TIMEOUT_MS = 500L
+        private const val EVAL_TIMEOUT_MS = 1_000L
         private const val RESULT_SETTLE_MS = 3_000L
-        private const val SCRIPT_BUDGET_MS = 20_000L
+        private const val SCRIPT_BUDGET_MS = 40_000L
     }
 }
