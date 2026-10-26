@@ -6,6 +6,8 @@
     android:background="@drawable/focus_background"
     android:clickable="true"
     android:focusable="true"
+    android:gravity="center_vertical"
+    android:minHeight="@dimen/link_row_min_height"
     android:orientation="horizontal"
     android:padding="16dp">
 
@@ -14,7 +16,7 @@
         android:layout_width="40dp"
         android:layout_height="wrap_content"
         android:textColor="@color/muted"
-        android:textSize="16sp" />
+        android:textSize="@dimen/body_text_size" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -29,7 +31,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/on_surface"
-            android:textSize="18sp"
+            android:textSize="@dimen/body_text_size"
             android:textStyle="bold" />
 
         <TextView
@@ -39,7 +41,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/muted"
-            android:textSize="13sp" />
+            android:textSize="@dimen/secondary_text_size" />
 
     </LinearLayout>
 

@@ -11,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import org.json.JSONArray
 import org.json.JSONObject
@@ -24,14 +24,27 @@ class DomLinkScraper(
     private val script: String
 ) {
 
+    @Volatile
+    var lastTabSelected: Boolean = true
+        private set
+
     suspend fun scrape(
         searchUrl: String,
-        maxCandidates: Int = 60,
-        timeoutMs: Long = 25_000
-    ): List<LinkCandidate> = withTimeout(timeoutMs) {
+        tab: SearchTab = SearchTab.LATEST,
+        maxCandidates: Int = 150,
+        timeoutMs: Long = 30_000
+    ): List<LinkCandidate> = withTimeoutOrNull(timeoutMs) {
         withContext(Dispatchers.Main) {
+            lastTabSelected = true
             loadAndWait(searchUrl)
-            delay(2_000)
+            delay(PAGE_SETTLE_MS)
+            val tabSelection = if (tab == SearchTab.LATEST) {
+                LatestTabSelector(::evaluate).select()
+            } else {
+                TabSelection.SELECTED
+            }
+            lastTabSelected = tabSelection != TabSelection.FAILED
+            if (tabSelection == TabSelection.CLICKED) delay(RESULT_SETTLE_MS)
             val deferred = CompletableDeferred<String>()
             val token = UUID.randomUUID().toString()
             bridge.expectedToken = token
@@ -39,6 +52,7 @@ class DomLinkScraper(
             try {
                 val js = script
                     .replace("__MAX__", maxCandidates.toString())
+                    .replace("__BUDGET_MS__", SCRIPT_BUDGET_MS.toString())
                     .replace("__TOKEN__", token)
                 webView.evaluateJavascript(js, null)
                 parseCandidates(deferred.await())
@@ -47,6 +61,12 @@ class DomLinkScraper(
                 bridge.expectedToken = null
             }
         }
+    } ?: emptyList()
+
+    private suspend fun evaluate(js: String): String? {
+        val result = CompletableDeferred<String>()
+        webView.evaluateJavascript(js) { value -> result.complete(value) }
+        return withTimeoutOrNull(EVAL_TIMEOUT_MS) { result.await() }
     }
 
     private suspend fun loadAndWait(url: String) = suspendCancellableCoroutine<Unit> { continuation ->
@@ -120,5 +140,12 @@ class DomLinkScraper(
         }
     } catch (_: Exception) {
         emptyList()
+    }
+
+    private companion object {
+        private const val PAGE_SETTLE_MS = 2_000L
+        private const val EVAL_TIMEOUT_MS = 500L
+        private const val RESULT_SETTLE_MS = 3_000L
+        private const val SCRIPT_BUDGET_MS = 20_000L
     }
 }

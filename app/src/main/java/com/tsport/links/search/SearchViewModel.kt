@@ -24,12 +24,12 @@ class SearchViewModel(
     private var job: Job? = null
 
     fun search(
-        rawHashtag: String,
+        options: SearchOptions,
         candidateSource: suspend (searchUrl: String) -> List<LinkCandidate>
     ) {
-        val searchUrl = SearchQueryBuilder.buildSearchUrl(rawHashtag)
+        val searchUrl = SearchQueryBuilder.buildSearchUrl(options)
         if (searchUrl == null) {
-            _state.value = SearchState.Failure("Geçerli bir hashtag girin.")
+            _state.value = SearchState.Failure("Geçerli bir arama metni girin.")
             return
         }
         job?.cancel()
@@ -77,6 +77,6 @@ class SearchViewModel(
     }
 
     companion object {
-        private const val SEARCH_TIMEOUT_MS = 25_000L
+        private const val SEARCH_TIMEOUT_MS = 60_000L
     }
 }

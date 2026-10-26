@@ -1,6 +1,8 @@
 (async function () {
   const MAX = __MAX__;
+  const BUDGET = __BUDGET_MS__;
   const TOKEN = "__TOKEN__";
+  const started = Date.now();
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const found = new Map();
 
@@ -59,7 +61,7 @@
 
   collect();
   let unchanged = 0;
-  for (let i = 0; i < 10 && found.size < MAX; i++) {
+  for (let i = 0; i < 15 && found.size < MAX && Date.now() - started < BUDGET; i++) {
     const count = document.querySelectorAll('article[data-testid="tweet"]').length;
     window.scrollTo(0, document.body.scrollHeight);
     await sleep(1500);

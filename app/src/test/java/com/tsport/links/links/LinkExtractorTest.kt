@@ -1,6 +1,10 @@
 package com.tsport.links.links
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -139,5 +143,44 @@ class LinkExtractorTest {
             )
         )
         assertEquals(listOf("https://x.com/i/broadcasts/ok_123"), result.map { it.url })
+    }
+
+    @Test
+    fun `default cap keeps fifty broadcast links`() = runBlocking {
+        val urls = (1..55).map { "https://x.com/i/broadcasts/$it" }
+        val result = LinkExtractor(FakeResolver()).extract(candidates(*urls.toTypedArray()))
+        assertEquals(50, result.size)
+        assertEquals("https://x.com/i/broadcasts/1", result.first().url)
+    }
+
+    @Test
+    fun `keeps resolved links when resolve budget expires`() = runBlocking {
+        val resolver = object : UrlResolver {
+            override suspend fun resolve(url: String): String? {
+                if (url.endsWith("/slow")) delay(5_000)
+                return when (url) {
+                    "https://t.co/fast" -> "https://x.com/i/broadcasts/fast"
+                    "https://t.co/slow" -> "https://x.com/i/broadcasts/slow"
+                    else -> null
+                }
+            }
+        }
+        val result = LinkExtractor(resolver, resolveBudgetMs = 100).extract(
+            candidates("https://t.co/fast", "https://t.co/slow")
+        )
+        assertEquals(listOf("https://x.com/i/broadcasts/fast"), result.map { it.url })
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `default resolve budget is ten seconds`() = runTest {
+        val start = currentTime
+        val resolver = UrlResolver {
+            delay(20_000)
+            "https://x.com/i/broadcasts/slow"
+        }
+        val result = LinkExtractor(resolver).extract(candidates("https://t.co/slow"))
+        assertTrue(result.isEmpty())
+        assertEquals(10_000, currentTime - start)
     }
 }

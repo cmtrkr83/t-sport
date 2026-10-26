@@ -19,7 +19,7 @@
         android:layout_height="match_parent"
         android:background="@color/bg"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="@dimen/screen_padding">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -33,16 +33,18 @@
                 android:layout_weight="1"
                 android:text="@string/app_name"
                 android:textColor="@color/on_surface"
-                android:textSize="24sp"
+                android:textSize="@dimen/title_text_size"
                 android:textStyle="bold" />
 
             <Button
                 android:id="@+id/logoutButton"
-                android:foreground="@drawable/button_focus_foreground"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:foreground="@drawable/button_focus_foreground"
+                android:minHeight="@dimen/control_min_height"
                 android:text="@string/logout"
                 android:textColor="@color/on_danger"
+                android:textSize="@dimen/body_text_size"
                 app:backgroundTint="@color/danger"
                 app:cornerRadius="6dp" />
 
@@ -60,50 +62,288 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:background="@drawable/focus_background"
-                android:hint="@string/hashtag_hint"
+                android:hint="@string/search_hint"
                 android:inputType="text"
+                android:minHeight="@dimen/control_min_height"
                 android:padding="12dp"
                 android:singleLine="true"
                 android:textColor="@color/on_surface"
                 android:textColorHint="@color/muted"
-                android:textSize="16sp" />
+                android:textSize="@dimen/body_text_size" />
 
             <Button
                 android:id="@+id/searchButton"
-                android:foreground="@drawable/button_focus_foreground"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
+                android:foreground="@drawable/button_focus_foreground"
+                android:minHeight="@dimen/control_min_height"
                 android:text="@string/search"
+                android:textSize="@dimen/body_text_size"
                 app:cornerRadius="6dp" />
 
         </LinearLayout>
 
-        <ProgressBar
-            android:id="@+id/progress"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:indeterminate="true"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/statusText"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/status_idle"
-            android:textColor="@color/muted"
-            android:textSize="15sp" />
+            android:orientation="horizontal">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/linkList"
+            <CheckBox
+                android:id="@+id/broadcastsCheck"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:buttonTint="@color/accent"
+                android:focusable="true"
+                android:foreground="@drawable/button_focus_foreground"
+                android:minHeight="@dimen/control_min_height"
+                android:text="@string/option_broadcasts"
+                android:textColor="@color/on_surface"
+                android:textSize="@dimen/body_text_size" />
+
+            <CheckBox
+                android:id="@+id/linksOnlyCheck"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:buttonTint="@color/accent"
+                android:focusable="true"
+                android:foreground="@drawable/button_focus_foreground"
+                android:minHeight="@dimen/control_min_height"
+                android:text="@string/option_links_only"
+                android:textColor="@color/on_surface"
+                android:textSize="@dimen/body_text_size" />
+
+        </LinearLayout>
+
+        <RadioGroup
+            android:id="@+id/tabGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/tabPopular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:buttonTint="@color/accent"
+                android:focusable="true"
+                android:foreground="@drawable/button_focus_foreground"
+                android:minHeight="@dimen/control_min_height"
+                android:text="@string/tab_popular"
+                android:textColor="@color/on_surface"
+                android:textSize="@dimen/body_text_size" />
+
+            <RadioButton
+                android:id="@+id/tabLatest"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:buttonTint="@color/accent"
+                android:focusable="true"
+                android:foreground="@drawable/button_focus_foreground"
+                android:minHeight="@dimen/control_min_height"
+                android:text="@string/tab_latest"
+                android:textColor="@color/on_surface"
+                android:textSize="@dimen/body_text_size" />
+
+        </RadioGroup>
+
+        <TextView
+            android:id="@+id/matchSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/muted"
+            android:textSize="@dimen/secondary_text_size"
+            android:visibility="gone" />
+
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="12dp"
-            android:layout_weight="1"
-            android:clipToPadding="false"
-            android:paddingBottom="24dp" />
+            android:layout_marginTop="8dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:id="@+id/matchdayPanel"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/matchdayTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/matchday_title"
+                    android:textColor="@color/on_surface"
+                    android:textSize="@dimen/title_text_size"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/matchDateText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/muted"
+                    android:textSize="@dimen/secondary_text_size" />
+
+                <LinearLayout
+                    android:id="@+id/matchLoadingGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <ProgressBar
+                        android:id="@+id/matchProgress"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:indeterminate="true" />
+
+                    <TextView
+                        android:id="@+id/matchLoadingText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:accessibilityLiveRegion="polite"
+                        android:text="@string/matchday_loading"
+                        android:textColor="@color/muted"
+                        android:textSize="@dimen/secondary_text_size" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/matchStateContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/matchStateIcon"
+                        android:layout_width="@dimen/empty_icon_size"
+                        android:layout_height="@dimen/empty_icon_size"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_football" />
+
+                    <TextView
+                        android:id="@+id/matchStateTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:accessibilityLiveRegion="polite"
+                        android:gravity="center"
+                        android:textColor="@color/on_surface"
+                        android:textSize="@dimen/body_text_size"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/matchStateCopy"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:textColor="@color/muted"
+                        android:textSize="@dimen/secondary_text_size" />
+
+                    <Button
+                        android:id="@+id/matchRetryButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:foreground="@drawable/button_focus_foreground"
+                        android:minHeight="@dimen/control_min_height"
+                        android:text="@string/matchday_retry"
+                        android:textSize="@dimen/body_text_size"
+                        android:visibility="gone"
+                        app:cornerRadius="6dp" />
+
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/matchList"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_weight="1"
+                    android:clipToPadding="false"
+                    android:paddingBottom="@dimen/screen_padding"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/matchdayAttribution"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/matchday_attribution"
+                    android:textColor="@color/muted"
+                    android:textSize="@dimen/secondary_text_size" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/resultsPanel"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/statusText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:accessibilityLiveRegion="polite"
+                        android:text="@string/status_idle"
+                        android:textColor="@color/muted"
+                        android:textSize="@dimen/secondary_text_size" />
+
+                    <Button
+                        android:id="@+id/matchdayBackButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:foreground="@drawable/button_focus_foreground"
+                        android:minHeight="@dimen/control_min_height"
+                        android:text="@string/matchday_back"
+                        android:textSize="@dimen/body_text_size"
+                        android:visibility="gone"
+                        app:cornerRadius="6dp" />
+
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/progress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:indeterminate="true"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/linkList"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_weight="1"
+                    android:clipToPadding="false"
+                    android:paddingBottom="@dimen/screen_padding" />
+
+            </LinearLayout>
+
+        </FrameLayout>
 
     </LinearLayout>
 

@@ -1,15 +1,18 @@
 package com.tsport.links.links
 
 import java.net.URI
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withTimeoutOrNull
 
 class LinkExtractor(
     private val resolver: UrlResolver,
-    private val maxLinks: Int = 20
+    private val maxLinks: Int = 50,
+    private val resolveBudgetMs: Long = 10_000
 ) {
 
     suspend fun extract(candidates: List<LinkCandidate>): List<LinkItem> {
@@ -26,11 +29,18 @@ class LinkExtractor(
         }
 
         val tcoUrls = normalized.keys.filter(::isTco)
-        val resolvedTco = coroutineScope {
+        val resolvedTco = ConcurrentHashMap<String, String>()
+        coroutineScope {
             val permits = Semaphore(MAX_CONCURRENT_RESOLVES)
-            tcoUrls.map { url ->
-                async { permits.withPermit { url to resolver.resolve(url) } }
-            }.awaitAll().toMap()
+            val jobs = tcoUrls.map { url ->
+                launch {
+                    permits.withPermit {
+                        resolver.resolve(url)?.let { resolvedTco[url] = it }
+                    }
+                }
+            }
+            withTimeoutOrNull(resolveBudgetMs) { jobs.joinAll() }
+            jobs.forEach { it.cancel() }
         }
 
         val results = LinkedHashMap<String, LinkItem>()

@@ -1,0 +1,13 @@
+<resources>
+    <dimen name="screen_padding">24dp</dimen>
+    <dimen name="title_text_size">24sp</dimen>
+    <dimen name="body_text_size">16sp</dimen>
+    <dimen name="secondary_text_size">14sp</dimen>
+    <dimen name="control_min_height">48dp</dimen>
+    <dimen name="match_row_min_height">72dp</dimen>
+    <dimen name="match_row_padding">12dp</dimen>
+    <dimen name="link_row_min_height">56dp</dimen>
+    <dimen name="badge_size">32dp</dimen>
+    <dimen name="column_gap">20dp</dimen>
+    <dimen name="empty_icon_size">96dp</dimen>
+</resources>

@@ -3,17 +3,44 @@
     <string name="login_hint">X hesabınızla giriş yapın</string>
     <string name="login_success">Giriş yapıldı</string>
     <string name="session_expired">Oturum sona erdi, tekrar giriş yapın.</string>
-    <string name="hashtag_hint">Hashtag (örn. GsvBJK)</string>
+    <string name="search_hint">Takım veya arama metni (örn. Galatasaray Fenerbahçe)</string>
+    <string name="option_broadcasts">broadcasts</string>
+    <string name="option_links_only">filter:links</string>
+    <string name="tab_popular">Popüler</string>
+    <string name="tab_latest">En son</string>
     <string name="search">Ara</string>
     <string name="logout">Çıkış</string>
-    <string name="status_idle">Bir hashtag girip Ara\'ya basın.</string>
+    <string name="status_idle">Bir arama metni girip Ara\'ya basın.</string>
     <string name="status_searching">Aranıyor...</string>
     <string name="status_found">%1$d link bulundu</string>
-    <string name="status_empty">Sonuç yok. Hashtag\'i kontrol edip Yenile\'ye bas.</string>
+    <string name="status_empty">Sonuç yok. Aramayı kontrol edip tekrar deneyin.</string>
+    <string name="status_tab_fallback">Sekme değiştirilemedi, Popüler sonuçlar gösteriliyor.</string>
     <string name="status_no_internet">İnternet bağlantısı yok.</string>
     <string name="status_page_error">X sayfası yüklenemedi.</string>
     <string name="status_no_browser">Açılacak tarayıcı bulunamadı.</string>
     <string name="logout_title">Çıkış</string>
     <string name="logout_message">X oturumu bu cihazdan silinsin mi?</string>
     <string name="cancel">Vazgeç</string>
+
+    <string name="matchday_title">Bugünün Süper Lig maçları</string>
+    <string name="matchday_loading">Maçlar yükleniyor…</string>
+    <string name="matchday_empty_title">Bugün Süper Lig maçı yok</string>
+    <string name="matchday_empty_copy">Yeni maçlar açıklandığında burada görünecek.</string>
+    <string name="matchday_error_title">Maçlar alınamadı</string>
+    <string name="matchday_error_copy">İnternet bağlantısını kontrol edip yeniden deneyin.</string>
+    <string name="matchday_retry">Yenile</string>
+    <string name="matchday_attribution">Veri: TheSportsDB</string>
+    <string name="matchday_back">Günün maçları</string>
+    <string name="matchday_summary_empty">Bugün maç yok</string>
+    <string name="matchday_status_finished">Bitti</string>
+    <string name="matchday_status_live">Canlı</string>
+    <string name="matchday_status_postponed">Ertelendi</string>
+    <string name="matchday_status_cancelled">İptal</string>
+    <string name="matchday_round">%1$d. hafta</string>
+    <string name="matchday_select">%1$s - %2$s, %3$s. Maçı seç.</string>
+
+    <plurals name="matchday_summary">
+        <item quantity="one">Bugün %1$d maç</item>
+        <item quantity="other">Bugün %1$d maç</item>
+    </plurals>
 </resources>

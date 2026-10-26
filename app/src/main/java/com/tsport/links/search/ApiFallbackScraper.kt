@@ -6,9 +6,8 @@ import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 class ApiFallbackScraper(
     private val webView: WebView,
@@ -19,8 +18,8 @@ class ApiFallbackScraper(
 
     suspend fun scrape(
         csrfToken: String,
-        maxPages: Int = 3,
-        timeoutMs: Long = 20_000
+        maxPages: Int = 6,
+        timeoutMs: Long = 15_000
     ): List<LinkCandidate> {
         if (csrfToken.isBlank()) return emptyList()
         val raw = withContext(Dispatchers.Main) {
@@ -35,9 +34,7 @@ class ApiFallbackScraper(
                 .replace("__TOKEN__", token)
             webView.evaluateJavascript(js, null)
             try {
-                withTimeout(timeoutMs) { deferred.await() }
-            } catch (error: TimeoutCancellationException) {
-                throw error
+                withTimeoutOrNull(timeoutMs) { deferred.await() }
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
