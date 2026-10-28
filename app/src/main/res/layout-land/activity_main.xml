@@ -60,7 +60,7 @@
             <ScrollView
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="0.32"
+                android:layout_weight="0.36"
                 android:fillViewport="true"
                 android:scrollbars="none">
 
@@ -104,27 +104,35 @@
                         android:id="@+id/broadcastsCheck"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
+                        android:layout_weight="1.08"
                         android:buttonTint="@color/accent"
+                        android:ellipsize="end"
                         android:focusable="true"
                         android:foreground="@drawable/button_focus_foreground"
+                        android:maxLines="1"
                         android:minHeight="@dimen/control_min_height"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="4dp"
                         android:text="@string/option_broadcasts"
                         android:textColor="@color/on_surface"
-                        android:textSize="@dimen/body_text_size" />
+                        android:textSize="@dimen/option_text_size" />
 
                     <CheckBox
                         android:id="@+id/linksOnlyCheck"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
+                        android:layout_weight="0.92"
                         android:buttonTint="@color/accent"
+                        android:ellipsize="end"
                         android:focusable="true"
                         android:foreground="@drawable/button_focus_foreground"
+                        android:maxLines="1"
                         android:minHeight="@dimen/control_min_height"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="0dp"
                         android:text="@string/option_links_only"
                         android:textColor="@color/on_surface"
-                        android:textSize="@dimen/body_text_size" />
+                        android:textSize="@dimen/option_text_size" />
 
                 </LinearLayout>
 
@@ -184,7 +192,7 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_marginStart="@dimen/column_gap"
-                android:layout_weight="0.68">
+                android:layout_weight="0.64">
 
                 <LinearLayout
                     android:id="@+id/matchdayPanel"
