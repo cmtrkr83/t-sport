@@ -43,7 +43,7 @@ object SearchQueryBuilder {
             parts += "filter:links"
         }
 
-        val fromGroup = priorityHandles.joinToString(" OR ") { "from:${it.removePrefix("@")}" }
+        val fromGroup = priorityHandles.joinToString(" OR ") { "from:${it.removePrefix("@")} include:nativeretweets" }
         val full = "(${parts.joinToString(" ")}) OR ($fromGroup)"
         val encoded = URLEncoder.encode(full, "UTF-8").replace("+", "%20")
         return "https://x.com/search?q=$encoded&src=typed_query"
