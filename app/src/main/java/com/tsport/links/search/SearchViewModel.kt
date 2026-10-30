@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tsport.links.links.LinkCandidate
 import com.tsport.links.links.LinkExtractor
+import com.tsport.links.links.PriorityAccount
+import com.tsport.links.links.PriorityAccounts
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -15,7 +17,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 class SearchViewModel(
-    private val extractor: LinkExtractor
+    private val extractor: LinkExtractor,
+    private val prioritiesProvider: () -> List<PriorityAccount> = { emptyList() }
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<SearchState>(SearchState.Idle)
@@ -40,7 +43,8 @@ class SearchViewModel(
                     val candidates = candidateSource(searchUrl)
                     extractor.extract(candidates)
                 }
-                if (links.isEmpty()) SearchState.Empty else SearchState.Success(links)
+                val ordered = prioritize(links, prioritiesProvider())
+                if (ordered.isEmpty()) SearchState.Empty else SearchState.Success(ordered)
             } catch (error: TimeoutCancellationException) {
                 SearchState.Failure("Arama zaman aşımına uğradı.")
             } catch (error: SessionExpiredException) {
@@ -79,4 +83,28 @@ class SearchViewModel(
     companion object {
         private const val SEARCH_TIMEOUT_MS = 120_000L
     }
+}
+
+/**
+ * Stable sort: priority accounts first (in their configured order), then the rest
+ * in the order the extractor produced them.
+ */
+private fun prioritize(
+    links: List<com.tsport.links.links.LinkItem>,
+    priorities: List<PriorityAccount>
+): List<com.tsport.links.links.LinkItem> {
+    if (links.isEmpty() || priorities.isEmpty()) return links
+    val ranks = HashMap<String, Int>()
+    priorities.forEachIndexed { index, account ->
+        ranks.putIfAbsent(account.normalizedHandle, index)
+        account.normalizedName?.let { ranks.putIfAbsent(it, index) }
+    }
+    if (ranks.isEmpty()) return links
+    return links.sortedWith(compareBy { link ->
+        val handle = link.handle?.trim()?.removePrefix("@")?.lowercase()
+        val byHandle = handle?.let { ranks[it] }
+        if (byHandle != null) return@compareBy byHandle
+        val name = link.author?.trim()?.lowercase()
+        name?.let { ranks[it] } ?: Int.MAX_VALUE
+    })
 }

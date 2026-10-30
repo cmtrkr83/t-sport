@@ -51,11 +51,12 @@ object TweetJsonLinkParser {
     }
 
     private fun collectTweet(tweet: JSONObject, out: MutableMap<String, LinkCandidate>) {
-        val author = authorOf(tweet)
+        val user = userOf(tweet)
         val legacy = tweet.optJSONObject("legacy")
         addUrlArray(
             legacy?.optJSONObject("entities")?.optJSONArray("urls"),
-            author,
+            user?.first,
+            user?.second,
             out
         )
         addUrlArray(
@@ -64,39 +65,44 @@ object TweetJsonLinkParser {
                 ?.optJSONObject("result")
                 ?.optJSONObject("entity_set")
                 ?.optJSONArray("urls"),
-            author,
+            user?.first,
+            user?.second,
             out
         )
-        addCardUrl(legacy?.optJSONObject("card"), author, out)
+        addCardUrl(legacy?.optJSONObject("card"), user?.first, user?.second, out)
     }
 
-    private fun authorOf(tweet: JSONObject): String? {
+    /** Returns the tweet author as (display name or @handle fallback, screen name). */
+    private fun userOf(tweet: JSONObject): Pair<String?, String?>? {
         val user = tweet.optJSONObject("core")
             ?.optJSONObject("user_results")
             ?.optJSONObject("result")
-            ?.optJSONObject("legacy")
-        val name = user?.optString("name")?.trim()?.takeIf { it.isNotEmpty() }
-        if (name != null) return name
-        val screenName = user?.optString("screen_name")?.trim()?.takeIf { it.isNotEmpty() }
-        return screenName?.let { "@$it" }
+            ?.optJSONObject("legacy") ?: return null
+        val name = user.optString("name").trim().takeIf { it.isNotEmpty() }
+        val screenName = user.optString("screen_name").trim().takeIf { it.isNotEmpty() }
+        if (name == null && screenName == null) return null
+        val author = name ?: screenName?.let { "@$it" }
+        return author to screenName
     }
 
     private fun addUrlArray(
         array: JSONArray?,
         author: String?,
+        handle: String?,
         out: MutableMap<String, LinkCandidate>
     ) {
         if (array == null) return
         for (index in 0 until array.length()) {
             val item = array.optJSONObject(index) ?: continue
-            addUrl(item.opt("expanded_url") as? String, author, out)
-            addUrl(item.opt("url") as? String, author, out)
+            addUrl(item.opt("expanded_url") as? String, author, handle, out)
+            addUrl(item.opt("url") as? String, author, handle, out)
         }
     }
 
     private fun addCardUrl(
         card: JSONObject?,
         author: String?,
+        handle: String?,
         out: MutableMap<String, LinkCandidate>
     ) {
         val values = card?.optJSONObject("legacy")?.optJSONArray("binding_values") ?: return
@@ -106,6 +112,7 @@ object TweetJsonLinkParser {
             addUrl(
                 item.optJSONObject("value")?.opt("string_value") as? String,
                 author,
+                handle,
                 out
             )
         }
@@ -114,6 +121,7 @@ object TweetJsonLinkParser {
     private fun addUrl(
         raw: String?,
         author: String?,
+        handle: String?,
         out: MutableMap<String, LinkCandidate>
     ) {
         if (raw == null) return
@@ -121,9 +129,15 @@ object TweetJsonLinkParser {
         if (!value.startsWith("http://") && !value.startsWith("https://")) return
         val existing = out[value]
         if (existing == null) {
-            out[value] = LinkCandidate(value, author)
-        } else if (existing.author.isNullOrBlank() && !author.isNullOrBlank()) {
-            out[value] = existing.copy(author = author)
+            out[value] = LinkCandidate(value, author, handle)
+        } else if (
+            (existing.author.isNullOrBlank() && !author.isNullOrBlank()) ||
+            (existing.handle.isNullOrBlank() && !handle.isNullOrBlank())
+        ) {
+            out[value] = existing.copy(
+                author = existing.author ?: author,
+                handle = existing.handle ?: handle
+            )
         }
     }
 }

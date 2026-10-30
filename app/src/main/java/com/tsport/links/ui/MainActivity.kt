@@ -15,6 +15,7 @@ import android.webkit.WebSettings
 import android.webkit.WebStorage
 import android.webkit.WebView
 import android.widget.Toast
+import java.io.File
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
@@ -31,8 +32,11 @@ import com.tsport.links.R
 import com.tsport.links.auth.AuthRepository
 import com.tsport.links.auth.LoginActivity
 import com.tsport.links.databinding.ActivityMainBinding
+import com.tsport.links.links.LinkCandidate
 import com.tsport.links.links.LinkExtractor
 import com.tsport.links.links.LinkItem
+import com.tsport.links.links.PriorityAccount
+import com.tsport.links.links.PriorityAccountsRepository
 import com.tsport.links.links.TcoResolver
 import com.tsport.links.matchday.MatchDayState
 import com.tsport.links.matchday.MatchDayViewModel
@@ -54,7 +58,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val authRepository = AuthRepository()
     private val viewModel: SearchViewModel by viewModels {
-        SearchViewModelFactory(LinkExtractor(TcoResolver()))
+        SearchViewModelFactory(LinkExtractor(TcoResolver())) { priorityRepository.get() }
     }
     private val matchDayViewModel: MatchDayViewModel by viewModels {
         MatchDayViewModelFactory(TheSportsDbSource())
@@ -72,6 +76,8 @@ class MainActivity : AppCompatActivity() {
     private var loginShown = false
     private var lastOptions: SearchOptions? = null
     private var lastTabFallback = false
+
+    private lateinit var priorityRepository: PriorityAccountsRepository
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,6 +103,12 @@ class MainActivity : AppCompatActivity() {
             transactionScript = readAsset("transaction_bundle.js")
         )
         configureWebView(binding.scrapeWebView, bridge)
+
+        priorityRepository = PriorityAccountsRepository(
+            bundled = { readAsset("priority_accounts.json") },
+            cacheFile = File(filesDir, "priority_accounts.json")
+        )
+        lifecycleScope.launch { priorityRepository.refresh() }
 
         binding.hashtagInput.setText(prefs().getString(KEY_LAST_HASHTAG, ""))
         binding.broadcastsCheck.isChecked = prefs().getBoolean(KEY_INCLUDE_BROADCASTS, false)
@@ -195,7 +207,22 @@ class MainActivity : AppCompatActivity() {
             .apply()
         getSystemService<InputMethodManager>()?.hideSoftInputFromWindow(binding.hashtagInput.windowToken, 0)
         viewModel.search(options) { searchUrl ->
+            priorityRepository.refresh()
             var tabFallback = false
+            val accountUrl = SearchQueryBuilder.buildAccountSearchUrl(
+                options,
+                priorityRepository.get().map { it.handle }
+            )
+            val accountCandidates = if (accountUrl != null) {
+                domScraper.scrape(
+                    accountUrl,
+                    options.tab,
+                    maxCandidates = 24,
+                    timeoutMs = 30_000L
+                )
+            } else {
+                emptyList()
+            }
             val domCandidates = domScraper.scrape(
                 searchUrl,
                 options.tab,
@@ -251,7 +278,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 emptyList()
             }
-            domCandidates + fallbackCandidates + apiCandidates
+            accountCandidates + domCandidates + fallbackCandidates + apiCandidates
         }
     }
 

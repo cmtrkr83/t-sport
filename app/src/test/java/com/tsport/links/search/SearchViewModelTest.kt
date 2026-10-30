@@ -2,6 +2,7 @@ package com.tsport.links.search
 
 import com.tsport.links.links.LinkCandidate
 import com.tsport.links.links.LinkExtractor
+import com.tsport.links.links.PriorityAccount
 import com.tsport.links.links.UrlResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -148,15 +149,21 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun `source receives url without f parameter`() = runTest {
-        var receivedUrl: String? = null
-        val viewModel = SearchViewModel(LinkExtractor(resolver))
-        viewModel.search(SearchOptions("GsvBJK")) { searchUrl ->
-            receivedUrl = searchUrl
-            emptyList()
+    fun `priority accounts are shown first`() = runTest {
+        val priorities = listOf(PriorityAccount("PriHandle"))
+        val viewModel = SearchViewModel(LinkExtractor(resolver)) { priorities }
+        viewModel.search(SearchOptions("q")) {
+            listOf(
+                LinkCandidate("https://x.com/i/broadcasts/b", author = "Other"),
+                LinkCandidate("https://x.com/i/broadcasts/a", handle = "PriHandle")
+            )
         }
         advanceUntilIdle()
-        assertTrue(receivedUrl != null)
-        assertFalse(receivedUrl!!.contains("f="))
+        val state = viewModel.state.value
+        assertTrue(state is SearchState.Success)
+        val links = (state as SearchState.Success).links
+        assertEquals(2, links.size)
+        assertEquals("https://x.com/i/broadcasts/a", links[0].url)
+        assertEquals("https://x.com/i/broadcasts/b", links[1].url)
     }
 }

@@ -4,5 +4,6 @@ data class LinkItem(
     val url: String,
     val domain: String,
     val sourceTweetUrl: String? = null,
-    val author: String? = null
+    val author: String? = null,
+    val handle: String? = null
 )

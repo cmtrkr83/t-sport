@@ -33,28 +33,40 @@
   function authorOf(article) {
     const userName = article.querySelector('[data-testid="User-Name"]');
     if (!userName) return null;
+    let name = null;
+    let handle = null;
     for (const span of userName.querySelectorAll("span")) {
       const text = (span.textContent || "").replace(/\s+/g, " ").trim();
-      if (!text || text.startsWith("@") || text.startsWith("·")) continue;
-      return text.split("·")[0].trim();
+      if (!text) continue;
+      if (handle === null && /^@[A-Za-z0-9_]{1,15}$/.test(text)) handle = text;
+      if (name === null && !text.startsWith("@") && !text.startsWith("·")) {
+        name = text.split("·")[0].trim();
+      }
     }
-    return null;
+    if (name === null && handle === null) return null;
+    return { name: name, handle: handle };
   }
 
-  function add(href, author) {
+  function add(href, author, handle) {
     if (!href || !/^https?:\/\//i.test(href)) return;
     if (!wanted(href)) return;
     const existing = found.get(href);
-    if (existing === undefined || (!existing && author)) {
-      found.set(href, author || null);
+    if (
+      existing === undefined ||
+      (!existing.author && author) ||
+      (!existing.handle && handle)
+    ) {
+      found.set(href, { author: author || null, handle: handle || null });
     }
   }
 
   function collect() {
     document.querySelectorAll('article[data-testid="tweet"]').forEach((article) => {
-      const author = authorOf(article);
+      const user = authorOf(article);
+      const author = user ? user.name : null;
+      const handle = user ? user.handle : null;
       // Broadcast links can be in the tweet text, a card, or a quoted tweet.
-      article.querySelectorAll('a[href]').forEach((a) => add(a.href, author));
+      article.querySelectorAll('a[href]').forEach((a) => add(a.href, author, handle));
     });
   }
 
@@ -104,5 +116,11 @@
   }
 
   console.log("TSport scrape done found=" + found.size + " articles=" + articleCount() + " url=" + location.href);
-  TSportBridge.domResult(TOKEN, JSON.stringify(Array.from(found, ([url, author]) => ({ url, author })).slice(0, MAX)));
+  TSportBridge.domResult(TOKEN, JSON.stringify(
+    Array.from(found, ([url, user]) => ({
+      url: url,
+      author: user.author,
+      handle: user.handle
+    })).slice(0, MAX)
+  ));
 })();

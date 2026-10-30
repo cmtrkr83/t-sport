@@ -20,11 +20,16 @@ class LinkExtractor(
         for (candidate in candidates) {
             val url = normalize(candidate.url) ?: continue
             val author = candidate.author?.trim()?.takeIf { it.isNotEmpty() }
+            val handle = candidate.handle?.trim()?.takeIf { it.isNotEmpty() }
             val existing = normalized[url]
             if (existing == null) {
-                normalized[url] = LinkCandidate(url, author)
-            } else if (existing.author == null && author != null) {
-                normalized[url] = existing.copy(author = author)
+                normalized[url] = LinkCandidate(url, author, handle)
+            } else {
+                val merged = existing.copy(
+                    author = existing.author ?: author,
+                    handle = existing.handle ?: handle
+                )
+                if (merged != existing) normalized[url] = merged
             }
         }
 
@@ -52,10 +57,15 @@ class LinkExtractor(
                 results[finalUrl] = LinkItem(
                     url = finalUrl,
                     domain = "x.com",
-                    author = meta.author
+                    author = meta.author,
+                    handle = meta.handle
                 )
-            } else if (existing.author == null && meta.author != null) {
-                results[finalUrl] = existing.copy(author = meta.author)
+            } else {
+                val merged = existing.copy(
+                    author = existing.author ?: meta.author,
+                    handle = existing.handle ?: meta.handle
+                )
+                if (merged != existing) results[finalUrl] = merged
             }
         }
         return results.values.toList()

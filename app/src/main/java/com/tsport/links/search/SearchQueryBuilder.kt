@@ -30,6 +30,25 @@ object SearchQueryBuilder {
         return "https://x.com/search?q=$encoded&src=typed_query"
     }
 
+    fun buildAccountSearchUrl(options: SearchOptions, priorityHandles: List<String>): String? {
+        if (priorityHandles.isEmpty()) return null
+        val base = options.query.trim().replace(Regex("\\s+"), " ")
+        if (base.isEmpty() || base.all { it == '#' || it.isWhitespace() }) return null
+
+        val parts = mutableListOf(base)
+        if (options.includeBroadcasts && !containsToken(base, "broadcasts")) {
+            parts += "broadcasts"
+        }
+        if (options.linksOnly && !containsToken(base, "filter:links")) {
+            parts += "filter:links"
+        }
+
+        val fromGroup = priorityHandles.joinToString(" OR ") { "from:${it.removePrefix("@")}" }
+        val full = "(${parts.joinToString(" ")}) OR ($fromGroup)"
+        val encoded = URLEncoder.encode(full, "UTF-8").replace("+", "%20")
+        return "https://x.com/search?q=$encoded&src=typed_query"
+    }
+
     private fun containsToken(query: String, token: String): Boolean =
         Regex(
             "(?i)(?<![\\p{L}\\p{N}_])${Regex.escape(token)}(?![\\p{L}\\p{N}_])"
